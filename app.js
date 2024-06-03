@@ -51,6 +51,12 @@ SocketIO.on("connection", (socket) => {
         "message",
         formatMSG(Chat_Name, user.username + " joined the chat")
       );
+
+    // Listen for chat message
+    socket.on("chat_message", (msg) => {
+      //send message to the same room
+      SocketIO.to(user.room).emit("message", formatMSG(user.username, msg));
+    });
   });
 
   // User Leave the chat
