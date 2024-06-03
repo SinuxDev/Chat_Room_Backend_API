@@ -14,25 +14,54 @@ const server = app.listen(3000, () => {
 
 const SocketIO = socketIO(server, { cors: { origin: "*" } });
 
+const users = [];
+
+const addUser = (id, username, room) => {
+  const user = { id, username, room };
+  users.push(user);
+  return user;
+};
+
+const disconnectUser = (id) => {
+  const index = users.findIndex((user) => user.id === id);
+  if (index !== -1) {
+    return users.splice(index, 1)[0];
+  }
+};
+
 // Run when client-server connection is established
 SocketIO.on("connection", (socket) => {
   console.log("Client connected");
 
-  const BOT_NAME = "Bot Su";
-  const BOT_MSG = "Welcome to SuChat.io";
-  socket.emit("message", formatMSG(BOT_NAME, BOT_MSG));
+  const Chat_Name = "Su_Bot";
+  const Chat_MSG = "Welcome to SuChat.io";
 
-  // Listen for join room / send join room message except for the user itself
-  socket.broadcast.emit(
-    "message",
-    formatMSG(BOT_NAME, "Anonymous has joined the chat")
-  );
+  // Listen for join room
+  socket.on("join_room", ({ username, room }) => {
+    const user = addUser(socket.id, username, room);
+    socket.join(user.room);
+
+    // Welcome joined user
+    socket.emit("message", formatMSG(Chat_Name, Chat_MSG));
+
+    // Listen for join room / send join room message except for the user itself
+    socket.broadcast
+      .to(user.room)
+      .emit(
+        "message",
+        formatMSG(Chat_Name, user.username + " joined the chat")
+      );
+  });
 
   // User Leave the chat
   socket.on("disconnect", () => {
-    SocketIO.emit(
-      "message",
-      formatMSG(BOT_NAME, "Anonymous has left the chat")
-    );
+    const user = disconnectUser(socket.id);
+
+    if (user) {
+      SocketIO.to(user.room).emit(
+        "message",
+        formatMSG(Chat_Name, user.username + " leave the chat")
+      );
+    }
   });
 });
