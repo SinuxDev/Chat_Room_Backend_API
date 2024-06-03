@@ -29,6 +29,11 @@ const disconnectUser = (id) => {
   }
 };
 
+//Get User List
+const getSameUsers = (room) => {
+  return users.filter((user) => user.room == room);
+};
+
 // Run when client-server connection is established
 SocketIO.on("connection", (socket) => {
   console.log("Client connected");
@@ -57,6 +62,9 @@ SocketIO.on("connection", (socket) => {
       //send message to the same room
       SocketIO.to(user.room).emit("message", formatMSG(user.username, msg));
     });
+
+    //Send Room Users
+    SocketIO.to(user.room).emit("room_users", getSameUsers(user.room));
   });
 
   // User Leave the chat
