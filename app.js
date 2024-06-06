@@ -5,9 +5,12 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const { formatMSG } = require("./utils/formatMSG");
+const MessageController = require("./controller/MessageController");
 
 const app = express();
 app.use(cors());
+
+app.get("/room/:roomName", MessageController.getOldMessage);
 
 // Connect to MongoDB
 mongoose
@@ -61,7 +64,7 @@ SocketIO.on("connection", (socket) => {
       });
     });
 
-    //Send Room Users
+    //Send Room Users when Join Room
     SocketIO.to(user.room).emit("room_users", getSameUsers(user.room));
   });
 
@@ -75,5 +78,8 @@ SocketIO.on("connection", (socket) => {
         formatMSG(Chat_Name, user.username + " leave the chat")
       );
     }
+
+    //Send Room Users when Leave Room
+    SocketIO.to(user.room).emit("room_users", getSameUsers(user.room));
   });
 });
