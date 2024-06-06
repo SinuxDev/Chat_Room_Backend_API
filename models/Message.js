@@ -10,7 +10,7 @@ const MessageSchema = new Schema({
     required: true,
   },
   sent_at: {
-    type: String,
+    type: Date,
     default: Date.now(),
   },
   room: {
