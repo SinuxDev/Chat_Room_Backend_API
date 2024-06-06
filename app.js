@@ -1,12 +1,19 @@
 const express = require("express");
 const socketIO = require("socket.io");
 const cors = require("cors");
+const mongoose = require("mongoose");
+require("dotenv").config();
 
 const { formatMSG } = require("./utils/formatMSG");
 
 const app = express();
-
 app.use(cors());
+
+// Connect to MongoDB
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.log(err));
 
 const server = app.listen(3000, () => {
   console.log("Server is running on port 3000");
@@ -14,25 +21,9 @@ const server = app.listen(3000, () => {
 
 const SocketIO = socketIO(server, { cors: { origin: "*" } });
 
-const users = [];
+const { addUser, disconnectUser, getSameUsers } = require("./utils/user");
 
-const addUser = (id, username, room) => {
-  const user = { id, username, room };
-  users.push(user);
-  return user;
-};
-
-const disconnectUser = (id) => {
-  const index = users.findIndex((user) => user.id === id);
-  if (index !== -1) {
-    return users.splice(index, 1)[0];
-  }
-};
-
-//Get User List
-const getSameUsers = (room) => {
-  return users.filter((user) => user.room == room);
-};
+const Message = require("./models/Message");
 
 // Run when client-server connection is established
 SocketIO.on("connection", (socket) => {
@@ -41,7 +32,7 @@ SocketIO.on("connection", (socket) => {
   const Chat_Name = "Su_Bot";
   const Chat_MSG = "Welcome to SuChat.io";
 
-  // Listen for join room
+  // Listen for when user join room
   socket.on("join_room", ({ username, room }) => {
     const user = addUser(socket.id, username, room);
     socket.join(user.room);
@@ -57,10 +48,17 @@ SocketIO.on("connection", (socket) => {
         formatMSG(Chat_Name, user.username + " joined the chat")
       );
 
-    // Listen for chat message
+    // Listen for chat message from users
     socket.on("chat_message", (msg) => {
       //send message to the same room
       SocketIO.to(user.room).emit("message", formatMSG(user.username, msg));
+
+      //Save Message to MongoDB
+      Message.create({
+        username: user.username,
+        room: user.room,
+        message: msg,
+      });
     });
 
     //Send Room Users
